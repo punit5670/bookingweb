@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DJ Booking Form</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans',Helvetica,Arial;background:#0f172a;margin:0;color:#f8fafc;min-height:100vh;display:block;padding:20px;}
+    .card{background:#1e293b;padding:24px;border-radius:16px;box-shadow:0 8px 25px rgba(0,0,0,0.4);width:100%;max-width:740px;border:1px solid #334155}
+    h1{margin:0 0 12px;font-size:20px}
+    label{display:block;margin-top:10px;font-size:14px}
+    input,select,textarea{width:100%;padding:10px 12px;margin-top:6px;border:1px solid #475569;border-radius:10px;font-size:14px;background:#0f172a;color:#f8fafc}
+    button:hover{background:#2563eb;transform:translateY(-2px);}{margin-top:12px;padding:10px 16px;border-radius:10px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600;transition:0.25s}
+    table{width:100%;border-collapse:collapse;margin-top:16px}
+    th,td{padding:8px;border:1px solid #e5e7eb;text-align:left;font-size:13px}
+    .small{font-size:12px;color:#6b7280}
+    .row{display:flex;gap:12px}
+    .col{flex:1}
+    .right{display:flex;gap:8px;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="card" style="margin:0 auto;">
+    <h1>🎧 Dj Mahakal</h1>
+    <p class="small">नीचे फ़ॉर्म भरें — नाम, नंबर, स्पीकर की संख्या और बजने वाले जगह की डिटेल्स।</p>
+
+    <form id="bookingForm">
+      <label>Booking करने वाले का नाम *</label>
+      <input type="text" id="name" placeholder="पूरा नाम" required />
+
+      <label>Contact Number *</label>
+      <input type="tel" id="phone" placeholder="10-digit नंबर" required />
+
+      <div class="row">
+        <div class="col">
+          <label>Number of bass *</label>
+          <select id="speakers" required>
+            <option value="">--- चुनें ---</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+          </select>
+        </div>
+
+        <div class="col">
+          <label>Number of Top *</label>
+          <select id="tops" required>
+            <option value="">--- चुनें ---</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10">10</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Event Date</label>
+          <input type="date" id="date" />
+          
+        </div>
+      </div>
+
+      <label>(कहाँ बजेगा) — जगह की डिटेल्स *</label>
+      <textarea id="location" rows="3" placeholder="Venue name, area, city" required></textarea>
+
+      <label>money डिटेल्स</label>
+      <textarea id="notes" rows="2" placeholder="किसी विशेष निर्देश या रिक्वायरमेंट को लिखें"></textarea>
+
+      <div class="right">
+        <button type="submit">Book Now</button>
+        <button type="button" id="clearAll">Clear All Bookings</button>
+        <button type="button" id="exportCsv">Export CSV</button>
+      </div>
+    </form>
+
+    <h2 style="margin-top:18px;font-size:16px">Saved Bookings</h2>
+    <div id="bookingsArea">
+      <p class="small">कोई बुकिंग अभी तक नहीं।</p>
+    </div>
+  </div>
+
+<script>
+  const KEY = 'dj_bookings_v1';
+  let editIndex = -1;
+
+  function loadBookings(){ const raw = localStorage.getItem(KEY) || '[]'; try{return JSON.parse(raw);}catch(e){return [];} }
+  function saveBookings(list){ localStorage.setItem(KEY, JSON.stringify(list)); }
+
+  function escapeHtml(s){ if(!s && s !== 0) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+  function render(){
+    const list = loadBookings();
+    const area = document.getElementById('bookingsArea');
+    if(!list.length){ area.innerHTML = '<p class="small">कोई बुकिंग अभी तक नहीं।</p>'; return; }
+
+    let html = '<table><thead><tr><th>#</th><th>नाम</th><th>नंबर</th><th>Bass</th><th>Top</th><th>जगह</th><th>Date</th><th>Notes</th><th>Actions</th></tr></thead><tbody>';
+
+    list.forEach((b,i)=>{
+      html += `<tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(b.name)}</td>
+        <td>${escapeHtml(b.phone)}</td>
+        <td>${escapeHtml(b.speakers)}</td><td>${escapeHtml(b.tops||'-')}</td>
+        <td>${escapeHtml(b.location)}</td>
+        <td>${b.date?escapeHtml(b.date):'-'}</td>
+        <td>${escapeHtml(b.notes||'-')}</td>
+        <td>
+          <button class="editBtn" data-idx="${i}">Edit</button>
+          <button class="deleteBtn" data-idx="${i}">Delete</button>
+        </td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    area.innerHTML = html;
+
+    document.querySelectorAll('.deleteBtn').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        const idx = Number(e.target.dataset.idx);
+        const list = loadBookings(); list.splice(idx,1); saveBookings(list); render();
+      });
+    });
+
+    document.querySelectorAll('.editBtn').forEach(btn=>{
+      btn.addEventListener('click', e=>{
+        editIndex = Number(e.target.dataset.idx);
+        const b = loadBookings()[editIndex];
+        document.getElementById('name').value = b.name;
+        document.getElementById('phone').value = b.phone;
+        document.getElementById('speakers').value = b.speakers;
+        document.getElementById('location').value = b.location;
+        document.getElementById('date').value = b.date;
+        document.getElementById('notes').value = b.notes;
+      });
+    });
+  }
+
+  document.getElementById('bookingForm').addEventListener('submit', e=>{
+    e.preventDefault();
+
+    const data = {
+      name: document.getElementById('name').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      speakers: document.getElementById('speakers').value,
+      tops: document.getElementById('tops').value,
+      location: document.getElementById('location').value.trim(),
+      date: document.getElementById('date').value,
+      notes: document.getElementById('notes').value.trim(),
+      created: new Date().toISOString()
+    };
+
+    if(!data.name || !data.phone || !data.speakers || !data.location){
+      alert('कृपया सारे आवश्यक फील्ड भरें: नाम, नंबर, स्पीकर और जगह।'); return;
+    }
+
+    const phoneDigits = data.phone.replace(/[^0-9]/g,'');
+    if(phoneDigits.length < 7){ alert('कृपया वैध नंबर डालें।'); return; }
+
+    const list = loadBookings();
+
+    if(editIndex >= 0){
+      list[editIndex] = {...data, tops: document.getElementById('tops').value};
+      editIndex = -1;
+      alert('Booking Updated!');
+    } else {
+      list.push({...data, tops: document.getElementById('tops').value});
+      alert('Booking Saved!');
+    }
+
+    saveBookings(list);
+    e.target.reset();
+    render();
+  });
+
+  document.getElementById('clearAll').addEventListener('click', ()=>{
+    if(confirm('सारे बुकिंग हटाने हैं?')){ localStorage.removeItem(KEY); render(); }
+  });
+
+  document.getElementById('exportCsv').addEventListener('click', ()=>{
+    const list = loadBookings(); if(!list.length){ alert('Export के लिए कोई बुकिंग नहीं है।'); return; }
+    const rows = [['Name','Phone','Speakers','Location','Date','Notes','Created']];
+    list.forEach(r=> rows.push([r.name,r.phone,r.speakers,r.location,r.date||'',r.notes||'',r.created||'']));
+    const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'dj_bookings.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+
+  render();
+</script>
+  
+  
+
+  
+</body>
+</html>
